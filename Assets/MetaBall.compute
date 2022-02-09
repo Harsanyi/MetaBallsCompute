@@ -1,0 +1,45 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel RadiantColor
+
+RWTexture2D<float4> result;
+float _LineDistance;
+float _LineThickness;
+float4 _BackgroundColor;
+float4 _LineColor;
+bool _Shaded;
+
+struct BallData
+{
+    float2 pos;
+    float radious;
+};
+
+RWStructuredBuffer<BallData> balls;
+
+float distance(float2 a, float2 b)
+{
+    return pow(pow(a.x - b.x, 2) + pow(a.y-b.y,2), 0.5);
+}
+
+[numthreads(8,8,1)]
+void RadiantColor (uint3 id : SV_DispatchThreadID)
+{
+    float value = 0;
+    uint length, size;
+    
+    balls.GetDimensions(length,size);
+    for (int i = 0; i < length; ++i)
+    {
+        value += 1 / (distance(id.xy, balls[i].pos) / balls[i].radious);
+    }
+    
+    
+    if (_Shaded)
+    {
+        result[id.xy] = lerp(_BackgroundColor,_LineColor,value);
+    }
+    else
+    {
+        result[id.xy] = (value <= (_LineDistance + _LineThickness) && value >= (_LineDistance - _LineThickness)) ? _LineColor : _BackgroundColor;
+    }      
+}
